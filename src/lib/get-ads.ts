@@ -126,12 +126,20 @@ export async function getArchiveData(): Promise<{ ads: Ad[]; brands: Brand[]; so
   if (D1_CONFIGURED) {
     try {
       const ads = await fetchAdsFromD1();
+      console.log(`[d1] query ok, rows=${ads.length}`);
       if (ads.length > 0) {
         return { ads, brands: brandsFromAds(ads), source: "d1" };
       }
+      console.warn("[d1] D1 returned 0 rows — falling back to mock data");
     } catch (err) {
-      console.error("Falling back to mock ads — D1 fetch failed:", err);
+      console.error("[d1] Falling back to mock ads — D1 fetch failed:", err);
     }
+  } else {
+    console.warn(
+      `[d1] not configured — account=${Boolean(process.env.CLOUDFLARE_ACCOUNT_ID)} token=${Boolean(
+        process.env.CLOUDFLARE_API_TOKEN
+      )} db=${Boolean(process.env.CLOUDFLARE_D1_DATABASE_ID)}`
+    );
   }
 
   const ads = generateMockAds();
