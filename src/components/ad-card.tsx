@@ -16,47 +16,53 @@ function relativeDays(iso: string) {
 export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
   const hasRealMedia = Boolean(ad.mediaUrl);
 
-  const thumb = (
+  // Real creatives render at their own natural aspect ratio (no fixed box,
+  // no object-contain/object-cover) — ad screenshots come in every shape
+  // (Apple's are tall portrait phone shots, Meta/TikTok vary too), and
+  // forcing them into one fixed ratio either crops them or surrounds them
+  // with big empty bars. Letting the <img>/<video> size itself keeps the
+  // whole ad visible and fills the card. Only the no-media placeholder
+  // (mock data, or a row with no asset yet) needs a fixed box, since a
+  // flat color swatch has no intrinsic size of its own.
+  const thumb = hasRealMedia ? (
+    <div className="relative w-full overflow-hidden rounded-t-md bg-background-overlay">
+      {ad.mediaKind === "video" ? (
+        <video src={ad.mediaUrl!} className="block w-full" muted loop playsInline autoPlay />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- creatives come from many third-party CDNs (Apple, Meta, ...), so a plain <img> avoids maintaining a remotePatterns allowlist per source.
+        <img src={ad.mediaUrl!} alt={ad.headline} className="block w-full" loading="lazy" />
+      )}
+      <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur-sm">
+        <PlatformDot platform={ad.platform} />
+        <span className="text-[10px] font-medium text-white/90">{PLATFORM_LABEL[ad.platform]}</span>
+      </div>
+      <div className="absolute right-2 top-2 rounded-full bg-black/40 p-1 backdrop-blur-sm">
+        {ad.mediaKind === "video" ? (
+          <Play className="size-3 text-white/90" />
+        ) : (
+          <Images className="size-3 text-white/90" />
+        )}
+      </div>
+      {ad.status === "active" && (
+        <span className="absolute bottom-2 left-2 rounded-full border border-accent/40 bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+          Active · {ad.durationDays}d
+        </span>
+      )}
+    </div>
+  ) : (
     <div
       className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-t-md"
       style={{
         background: `linear-gradient(145deg, ${ad.swatch[0]}, ${ad.swatch[0]} 55%, ${ad.swatch[1]}22)`,
       }}
     >
-      {hasRealMedia ? (
-        ad.mediaKind === "video" ? (
-          <video
-            src={ad.mediaUrl!}
-            // object-contain: ad creatives come in wildly different native
-            // ratios (Apple's App Store screenshots are ~2.16:1, Meta/TikTok
-            // vary too), so we show the whole creative letterboxed on the
-            // card's own gradient rather than cropping it with object-cover.
-            className="absolute inset-0 size-full object-contain"
-            muted
-            loop
-            playsInline
-            autoPlay
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element -- creatives come from many third-party CDNs (Apple, Meta, ...), so a plain <img> avoids maintaining a remotePatterns allowlist per source.
-          <img
-            src={ad.mediaUrl!}
-            alt={ad.headline}
-            className="absolute inset-0 size-full object-contain"
-            loading="lazy"
-          />
-        )
-      ) : (
-        <>
-          <div className="noise-grid absolute inset-0 opacity-40" />
-          <span
-            className="relative px-4 text-center text-sm font-medium leading-snug"
-            style={{ color: ad.swatch[1] }}
-          >
-            {ad.headline}
-          </span>
-        </>
-      )}
+      <div className="noise-grid absolute inset-0 opacity-40" />
+      <span
+        className="relative px-4 text-center text-sm font-medium leading-snug"
+        style={{ color: ad.swatch[1] }}
+      >
+        {ad.headline}
+      </span>
       <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur-sm">
         <PlatformDot platform={ad.platform} />
         <span className="text-[10px] font-medium text-white/90">{PLATFORM_LABEL[ad.platform]}</span>
