@@ -18,20 +18,20 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
 
   const thumb = (
     <div
-      className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-t-md"
-      style={
-        hasRealMedia
-          ? undefined
-          : {
-              background: `linear-gradient(145deg, ${ad.swatch[0]}, ${ad.swatch[0]} 55%, ${ad.swatch[1]}22)`,
-            }
-      }
+      className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-t-md"
+      style={{
+        background: `linear-gradient(145deg, ${ad.swatch[0]}, ${ad.swatch[0]} 55%, ${ad.swatch[1]}22)`,
+      }}
     >
       {hasRealMedia ? (
         ad.mediaKind === "video" ? (
           <video
             src={ad.mediaUrl!}
-            className="absolute inset-0 size-full object-cover"
+            // object-contain: ad creatives come in wildly different native
+            // ratios (Apple's App Store screenshots are ~2.16:1, Meta/TikTok
+            // vary too), so we show the whole creative letterboxed on the
+            // card's own gradient rather than cropping it with object-cover.
+            className="absolute inset-0 size-full object-contain"
             muted
             loop
             playsInline
@@ -42,7 +42,7 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
           <img
             src={ad.mediaUrl!}
             alt={ad.headline}
-            className="absolute inset-0 size-full object-cover"
+            className="absolute inset-0 size-full object-contain"
             loading="lazy"
           />
         )
