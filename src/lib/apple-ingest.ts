@@ -11,13 +11,13 @@ function sleep(ms: number) {
 }
 
 interface Entity {
-  id: string;
+  id: number;
   name: string;
   type: "APP" | "DEVELOPER";
 }
 
 interface EntitySearchResponse {
-  entities?: Entity[];
+  data?: Entity[];
 }
 
 interface AdAsset {
@@ -42,7 +42,7 @@ interface AppleAd {
 }
 
 interface AdsResponse {
-  ads?: AppleAd[];
+  data?: AppleAd[];
 }
 
 async function appleGet<T>(path: string, params: Record<string, string>): Promise<T> {
@@ -64,7 +64,7 @@ async function findEntity(name: string): Promise<Entity | null> {
     types: "APP",
     limit: "5",
   });
-  return data.entities?.[0] ?? null;
+  return data.data?.[0] ?? null;
 }
 
 async function fetchAdsForEntity(entity: Entity, countries: string[]): Promise<AppleAd[]> {
@@ -74,7 +74,7 @@ async function fetchAdsForEntity(entity: Entity, countries: string[]): Promise<A
     datePreset: "LAST_90_DAYS",
     limit: "50",
   });
-  return data.ads ?? [];
+  return data.data ?? [];
 }
 
 async function upsertBrand(entity: Entity): Promise<string> {
