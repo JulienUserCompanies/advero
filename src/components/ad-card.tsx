@@ -14,20 +14,49 @@ function relativeDays(iso: string) {
 }
 
 export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
+  const hasRealMedia = Boolean(ad.mediaUrl);
+
   const thumb = (
     <div
       className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-t-md"
-      style={{
-        background: `linear-gradient(145deg, ${ad.swatch[0]}, ${ad.swatch[0]} 55%, ${ad.swatch[1]}22)`,
-      }}
+      style={
+        hasRealMedia
+          ? undefined
+          : {
+              background: `linear-gradient(145deg, ${ad.swatch[0]}, ${ad.swatch[0]} 55%, ${ad.swatch[1]}22)`,
+            }
+      }
     >
-      <div className="noise-grid absolute inset-0 opacity-40" />
-      <span
-        className="relative px-4 text-center text-sm font-medium leading-snug"
-        style={{ color: ad.swatch[1] }}
-      >
-        {ad.headline}
-      </span>
+      {hasRealMedia ? (
+        ad.mediaKind === "video" ? (
+          <video
+            src={ad.mediaUrl!}
+            className="absolute inset-0 size-full object-cover"
+            muted
+            loop
+            playsInline
+            autoPlay
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- creatives come from many third-party CDNs (Apple, Meta, ...), so a plain <img> avoids maintaining a remotePatterns allowlist per source.
+          <img
+            src={ad.mediaUrl!}
+            alt={ad.headline}
+            className="absolute inset-0 size-full object-cover"
+            loading="lazy"
+          />
+        )
+      ) : (
+        <>
+          <div className="noise-grid absolute inset-0 opacity-40" />
+          <span
+            className="relative px-4 text-center text-sm font-medium leading-snug"
+            style={{ color: ad.swatch[1] }}
+          >
+            {ad.headline}
+          </span>
+        </>
+      )}
       <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur-sm">
         <PlatformDot platform={ad.platform} />
         <span className="text-[10px] font-medium text-white/90">{PLATFORM_LABEL[ad.platform]}</span>

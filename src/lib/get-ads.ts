@@ -42,6 +42,7 @@ interface TagRow {
 interface AssetRow {
   ad_id: string;
   type: "video" | "image" | "carousel";
+  storage_url: string | null;
 }
 
 async function fetchAdsFromD1(): Promise<Ad[]> {
@@ -53,7 +54,7 @@ async function fetchAdsFromD1(): Promise<Ad[]> {
        FROM ad JOIN brand ON brand.id = ad.brand_id`
     ),
     d1Query<TagRow>(`SELECT ad_id, taxonomy, value FROM tag`),
-    d1Query<AssetRow>(`SELECT ad_id, type FROM creative_asset`),
+    d1Query<AssetRow>(`SELECT ad_id, type, storage_url FROM creative_asset`),
   ]);
 
   const tagsByAd = new Map<string, TagRow[]>();
@@ -93,6 +94,7 @@ async function fetchAdsFromD1(): Promise<Ad[]> {
       durationDays,
       mediaKind: asset?.type ?? "image",
       swatch: swatchForId(row.id),
+      mediaUrl: asset?.storage_url ?? null,
     } satisfies Ad;
   });
 }

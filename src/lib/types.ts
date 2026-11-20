@@ -49,4 +49,6 @@ export interface Ad {
   durationDays: number;
   mediaKind: "video" | "image" | "carousel";
   swatch: [string, string];
+  /** Real creative URL from creative_asset.storage_url, when we have one. */
+  mediaUrl?: string | null;
 }
