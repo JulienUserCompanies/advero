@@ -45,11 +45,11 @@ interface AdsResponse {
   data?: AppleAd[];
 }
 
-// Apple documents no rate limit, but in practice the repository throttles
-// hard after the very first request in a burst — confirmed empirically
-// (second request onward in a fresh run came back 429). Retry with backoff
-// rather than failing the whole query on the first rate limit.
-async function appleGet<T>(path: string, params: Record<string, string>, attempt = 1): Promise<T> {
+// Apple documents no rate limit, but empirically it throttles hard on rapid
+// bursts (confirmed: back-to-back calls 429; a 5s gap between two direct
+// calls succeeded cleanly). One retry after a long wait is as far as we can
+// go without risking the serverless function's own timeout.
+async function appleGet<T>(path: string, params: Record<string, string>, isRetry = false): Promise<T> {
   const url = new URL(`${BASE}${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
@@ -57,9 +57,9 @@ async function appleGet<T>(path: string, params: Record<string, string>, attempt
     headers: { Accept: "application/json" },
   });
 
-  if (res.status === 429 && attempt <= 3) {
-    await sleep(attempt * 2000); // 2s, 4s, 6s
-    return appleGet<T>(path, params, attempt + 1);
+  if (res.status === 429 && !isRetry) {
+    await sleep(5000);
+    return appleGet<T>(path, params, true);
   }
   if (!res.ok) {
     throw new Error(`Apple Ad Repository HTTP ${res.status} for ${path}: ${await res.text()}`);
@@ -140,33 +140,33 @@ export interface AppleIngestResult {
 }
 
 /**
- * Resolves each seed app/developer name to an Apple entity id, pulls its
+ * Resolves ONE seed app/developer name to an Apple entity id, pulls its
  * recent EU App Store ads, and upserts brand/ad/creative_asset rows into D1.
  * No tags written — same convention as the Meta ingestion module.
+ *
+ * Deliberately processes a single query per call: Apple's repository needs
+ * ~5s between requests to avoid 429s, and a serverless function's own time
+ * budget doesn't comfortably fit more than one entity-search + ads-fetch
+ * pair (each potentially needing its own 5s retry) per invocation. Callers
+ * that want to cover a whole seed list should call this once per name —
+ * see the cron route's day-rotation for how the daily job covers a list
+ * over time without needing a long-running batch.
  */
-export async function ingestAppleAds(queries: string[], countries: string[]): Promise<AppleIngestResult[]> {
-  const results: AppleIngestResult[] = [];
-  for (const query of queries) {
-    try {
-      const entity = await findEntity(query);
-      if (!entity) {
-        results.push({ query, entityFound: false, adsSeen: 0 });
-        await sleep(1000);
-        continue;
-      }
-      await sleep(1000); // space out the two calls within one query too
-      const ads = await fetchAdsForEntity(entity, countries);
-      if (ads.length > 0) {
-        const brandId = await upsertBrand(entity);
-        for (const ad of ads) {
-          await upsertAd(brandId, ad);
-        }
-      }
-      results.push({ query, entityFound: true, adsSeen: ads.length });
-    } catch (err) {
-      results.push({ query, entityFound: false, adsSeen: 0, error: err instanceof Error ? err.message : String(err) });
+export async function ingestOneAppleQuery(query: string, countries: string[]): Promise<AppleIngestResult> {
+  try {
+    const entity = await findEntity(query);
+    if (!entity) {
+      return { query, entityFound: false, adsSeen: 0 };
     }
-    await sleep(1000); // self-throttle between queries — Apple's limit is undocumented but tight
+    const ads = await fetchAdsForEntity(entity, countries);
+    if (ads.length > 0) {
+      const brandId = await upsertBrand(entity);
+      for (const ad of ads) {
+        await upsertAd(brandId, ad);
+      }
+    }
+    return { query, entityFound: true, adsSeen: ads.length };
+  } catch (err) {
+    return { query, entityFound: false, adsSeen: 0, error: err instanceof Error ? err.message : String(err) };
   }
-  return results;
 }
