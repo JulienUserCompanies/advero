@@ -1,7 +1,7 @@
 import { ArchiveClient } from "./archive-client";
-import { generateMockAds } from "@/lib/mock-data";
+import { getArchiveData } from "@/lib/get-ads";
 
-export default function Home() {
-  const ads = generateMockAds();
+export default async function Home() {
+  const { ads } = await getArchiveData();
   return <ArchiveClient ads={ads} />;
 }
