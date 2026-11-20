@@ -25,19 +25,16 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
   // (mock data, or a row with no asset yet) needs a fixed box, since a
   // flat color swatch has no intrinsic size of its own.
   const thumb = hasRealMedia ? (
-    <div className="relative w-full overflow-hidden rounded-t-md bg-background-overlay">
+    // The box itself is sized to 80% of the card (not full-width with the
+    // image floating smaller inside it), so there's no painted margin
+    // around the creative — just the card's own background, same as the
+    // gap above/below it.
+    <div className="relative mx-auto mt-3 w-4/5 overflow-hidden rounded-md">
       {ad.mediaKind === "video" ? (
-        <video
-          src={ad.mediaUrl!}
-          className="mx-auto block w-4/5"
-          muted
-          loop
-          playsInline
-          autoPlay
-        />
+        <video src={ad.mediaUrl!} className="block w-full" muted loop playsInline autoPlay />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- creatives come from many third-party CDNs (Apple, Meta, ...), so a plain <img> avoids maintaining a remotePatterns allowlist per source.
-        <img src={ad.mediaUrl!} alt={ad.headline} className="mx-auto block w-4/5" loading="lazy" />
+        <img src={ad.mediaUrl!} alt={ad.headline} className="block w-full" loading="lazy" />
       )}
       <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur-sm">
         <PlatformDot platform={ad.platform} />
