@@ -163,6 +163,10 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   meta: "Meta",
   tiktok: "TikTok",
   linkedin: "LinkedIn",
+  apple: "Apple App Store",
+  google: "Google",
+  bing: "Bing",
+  pinterest: "Pinterest",
 };
 
 export const FORMAT_LABEL: Record<AdFormat, string> = {

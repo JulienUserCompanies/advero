@@ -17,6 +17,10 @@
   --platform-meta: #4e8cff;
   --platform-tiktok: #ff3d6e;
   --platform-linkedin: #3dc6ff;
+  --platform-apple: #a3aab3;
+  --platform-google: #ffc84e;
+  --platform-bing: #4ebd6c;
+  --platform-pinterest: #e8456a;
 }
 
 @theme inline {
@@ -34,6 +38,10 @@
   --color-platform-meta: var(--platform-meta);
   --color-platform-tiktok: var(--platform-tiktok);
   --color-platform-linkedin: var(--platform-linkedin);
+  --color-platform-apple: var(--platform-apple);
+  --color-platform-google: var(--platform-google);
+  --color-platform-bing: var(--platform-bing);
+  --color-platform-pinterest: var(--platform-pinterest);
   --radius-lg: var(--radius);
   --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;

@@ -1,4 +1,4 @@
-export type Platform = "meta" | "tiktok" | "linkedin";
+export type Platform = "meta" | "tiktok" | "linkedin" | "apple" | "google" | "bing" | "pinterest";
 
 export type AdFormat = "ugc" | "polished" | "testimonial" | "demo" | "static";
 
