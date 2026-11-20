@@ -45,13 +45,22 @@ interface AdsResponse {
   data?: AppleAd[];
 }
 
-async function appleGet<T>(path: string, params: Record<string, string>): Promise<T> {
+// Apple documents no rate limit, but in practice the repository throttles
+// hard after the very first request in a burst — confirmed empirically
+// (second request onward in a fresh run came back 429). Retry with backoff
+// rather than failing the whole query on the first rate limit.
+async function appleGet<T>(path: string, params: Record<string, string>, attempt = 1): Promise<T> {
   const url = new URL(`${BASE}${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
   const res = await fetch(url.toString(), {
     headers: { Accept: "application/json" },
   });
+
+  if (res.status === 429 && attempt <= 3) {
+    await sleep(attempt * 2000); // 2s, 4s, 6s
+    return appleGet<T>(path, params, attempt + 1);
+  }
   if (!res.ok) {
     throw new Error(`Apple Ad Repository HTTP ${res.status} for ${path}: ${await res.text()}`);
   }
@@ -142,9 +151,10 @@ export async function ingestAppleAds(queries: string[], countries: string[]): Pr
       const entity = await findEntity(query);
       if (!entity) {
         results.push({ query, entityFound: false, adsSeen: 0 });
-        await sleep(300);
+        await sleep(1000);
         continue;
       }
+      await sleep(1000); // space out the two calls within one query too
       const ads = await fetchAdsForEntity(entity, countries);
       if (ads.length > 0) {
         const brandId = await upsertBrand(entity);
@@ -156,7 +166,7 @@ export async function ingestAppleAds(queries: string[], countries: string[]): Pr
     } catch (err) {
       results.push({ query, entityFound: false, adsSeen: 0, error: err instanceof Error ? err.message : String(err) });
     }
-    await sleep(300); // self-throttle — Apple documents no rate limit at all
+    await sleep(1000); // self-throttle between queries — Apple's limit is undocumented but tight
   }
   return results;
 }
