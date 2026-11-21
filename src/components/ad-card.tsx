@@ -99,21 +99,64 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
     </div>
   );
 
-  // The grid-card version of a teased platform: no creative at all, just
-  // enough to recognize the ad and decide whether to open it.
+  // The grid-card version of a teased platform: same box size as every
+  // other card (aspect-video) with the top sliver of the real ad peeking
+  // through, fading down into the card background — never the full
+  // creative. Clicking opens the untouched, full version in the dialog.
   const teaser = (
-    <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-t-md bg-background-overlay">
-      <div className="noise-grid absolute inset-0 opacity-30" />
-      <div className="relative flex flex-col items-center gap-1.5 px-4 text-center">
+    <div className="relative aspect-video w-full overflow-hidden rounded-t-md bg-background-overlay">
+      {hasRealMedia ? (
+        ad.mediaKind === "video" ? (
+          <video
+            src={ad.mediaUrl!}
+            className="absolute inset-0 h-full w-full object-cover object-top"
+            muted
+            loop
+            playsInline
+            autoPlay
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- see thumb above
+          <img
+            src={ad.mediaUrl!}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-top"
+            loading="lazy"
+          />
+        )
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(145deg, ${ad.swatch[0]}, ${ad.swatch[0]} 55%, ${ad.swatch[1]}22)`,
+          }}
+        >
+          <div className="noise-grid absolute inset-0 opacity-40" />
+        </div>
+      )}
+
+      {/* Fades the lower ~65% of the box down to the card background, so
+          only the top of the ad is actually visible. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom, transparent 0%, transparent 32%, var(--background-overlay) 88%)",
+        }}
+      />
+
+      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 pb-3 pt-6 text-center">
         <Lock className="size-4 text-muted-foreground" />
         <span className="text-xs font-medium text-muted-foreground">Click to view ad</span>
       </div>
+
       <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur-sm">
         <PlatformDot platform={ad.platform} />
         <span className="text-[10px] font-medium text-white/90">{PLATFORM_LABEL[ad.platform]}</span>
       </div>
       {ad.status === "active" && (
-        <span className="absolute bottom-2 left-2 rounded-full border border-accent/40 bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+        <span className="absolute right-2 top-2 rounded-full border border-accent/40 bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent">
           Active · {ad.durationDays}d
         </span>
       )}
