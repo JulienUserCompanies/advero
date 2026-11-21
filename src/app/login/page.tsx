@@ -164,8 +164,8 @@ function LoginForm() {
         )}
       </div>
 
-      <Link href="/archive" className="mt-6 text-xs text-muted-foreground hover:text-foreground">
-        Browse the archive without an account →
+      <Link href="/" className="mt-6 text-xs text-muted-foreground hover:text-foreground">
+        ← Back to home
       </Link>
     </div>
   );
