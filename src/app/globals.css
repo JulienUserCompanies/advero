@@ -23,6 +23,21 @@
   --platform-pinterest: #e8456a;
 }
 
+/* White-background option, toggled via <html class="light">. Platform dot
+   colors stay as-is — they're already tuned for contrast on both. */
+.light {
+  --background: #ffffff;
+  --background-raised: #f6f6f7;
+  --background-overlay: #eeeef0;
+  --foreground: #16171a;
+  --muted-foreground: #6b6f78;
+  --border: #e6e7ea;
+  --border-strong: #d4d6db;
+  --accent: #5b8a00;
+  --accent-foreground: #ffffff;
+  --accent-dim: #4a7200;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-background-raised: var(--background-raised);

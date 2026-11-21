@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Search, Bell, Terminal } from "lucide-react";
 
 export function TopBar({
@@ -48,6 +49,7 @@ export function TopBar({
           <Bell className="size-3.5" />
           Alert me on this search
         </Button>
+        <ThemeToggle />
       </div>
       <div className="flex h-9 items-center justify-between border-t border-border px-4 lg:px-6">
         <p className="mono-tabular text-xs text-muted-foreground">
