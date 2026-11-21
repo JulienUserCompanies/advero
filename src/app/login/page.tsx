@@ -36,6 +36,11 @@ function LoginForm() {
     setError(null);
 
     const supabase = createClient();
+    if (!supabase) {
+      setLoading(false);
+      setError("Accounts aren't configured yet — missing Supabase environment variables.");
+      return;
+    }
 
     if (mode === "sign-in") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });

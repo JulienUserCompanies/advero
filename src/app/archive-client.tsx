@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/mock-data";
 import type { Ad, Platform, AdFormat, CtaType } from "@/lib/types";
+import { useFollows, FREE_FOLLOW_LIMIT } from "@/lib/use-follows";
 import { LayoutGrid, Rows3, Table2 } from "lucide-react";
 
 const PAGE_SIZE = 24;
@@ -92,6 +93,8 @@ export function ArchiveClient({ ads }: { ads: Ad[] }) {
     });
   }
 
+  const { user, followedIds, pendingIds, toggleFollow, followCount } = useFollows();
+
   return (
     <div className="flex min-h-screen flex-col">
       <TopBar
@@ -102,6 +105,9 @@ export function ArchiveClient({ ads }: { ads: Ad[] }) {
         }}
         resultCount={filtered.length}
         onCreateAlert={() => setAlertOpen(true)}
+        user={user}
+        followCount={followCount}
+        followLimit={FREE_FOLLOW_LIMIT}
       />
       <div className="mx-auto flex w-full max-w-[1400px] flex-1">
         <FiltersSidebar
@@ -147,7 +153,14 @@ export function ArchiveClient({ ads }: { ads: Ad[] }) {
               }
             >
               {pageItems.map((ad) => (
-                <AdCard key={ad.id} ad={ad} view={view} />
+                <AdCard
+                  key={ad.id}
+                  ad={ad}
+                  view={view}
+                  following={followedIds.has(ad.brandId)}
+                  pending={pendingIds.has(ad.brandId)}
+                  onToggleFollow={toggleFollow}
+                />
               ))}
             </div>
           )}

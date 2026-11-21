@@ -1,21 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import type { User } from "@supabase/supabase-js";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Search, Bell, Terminal } from "lucide-react";
+import { Search, Bell, Terminal, Heart } from "lucide-react";
 
 export function TopBar({
   query,
   onQueryChange,
   resultCount,
   onCreateAlert,
+  user,
+  followCount,
+  followLimit,
 }: {
   query: string;
   onQueryChange: (v: string) => void;
   resultCount: number;
   onCreateAlert: () => void;
+  user?: User | null;
+  followCount?: number;
+  followLimit?: number;
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
@@ -52,7 +59,24 @@ export function TopBar({
           <Bell className="size-3.5" />
           Alert me on this search
         </Button>
+        {user && followLimit !== undefined && (
+          <span className="mono-tabular hidden shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground md:flex">
+            <Heart className="size-3" />
+            {followCount ?? 0}/{followLimit}
+          </span>
+        )}
         <ThemeToggle />
+        {user ? (
+          <form action="/auth/sign-out" method="post" className="shrink-0">
+            <Button size="sm" variant="ghost" type="submit">
+              Sign out
+            </Button>
+          </form>
+        ) : (
+          <Button size="sm" variant="ghost" asChild className="shrink-0">
+            <Link href="/login">Log in</Link>
+          </Button>
+        )}
       </div>
       <div className="flex h-9 items-center justify-between border-t border-border px-4 lg:px-6">
         <p className="mono-tabular text-xs text-muted-foreground">

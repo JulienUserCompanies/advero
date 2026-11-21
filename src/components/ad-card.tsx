@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { PlatformDot } from "@/components/platform-dot";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import type { Ad, Platform } from "@/lib/types";
-import { Play, Images, Lock } from "lucide-react";
+import type { ToggleFollowResult } from "@/lib/use-follows";
+import { Play, Images, Lock, Heart } from "lucide-react";
 
 const ARCHIVE_NOW = new Date("2026-11-20T00:00:00Z").getTime();
 
@@ -24,10 +26,37 @@ function relativeDays(iso: string) {
 // light and consistent regardless of why a given source is handled this way.
 const TEASED_PLATFORMS: Platform[] = ["linkedin", "apple"];
 
-export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
+export function AdCard({
+  ad,
+  view,
+  following = false,
+  pending = false,
+  onToggleFollow,
+}: {
+  ad: Ad;
+  view: "gallery" | "minimal";
+  following?: boolean;
+  pending?: boolean;
+  onToggleFollow?: (brandId: string, brandName: string) => Promise<ToggleFollowResult>;
+}) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [followError, setFollowError] = useState<string | null>(null);
   const teased = TEASED_PLATFORMS.includes(ad.platform);
   const hasRealMedia = Boolean(ad.mediaUrl);
+
+  async function handleFollowClick(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onToggleFollow || pending) return;
+    setFollowError(null);
+    const result = await onToggleFollow(ad.brandId, ad.brandName);
+    if (result.needsAuth) {
+      router.push("/login");
+      return;
+    }
+    if (result.error) setFollowError(result.error);
+  }
 
   // Real creatives render at their own natural aspect ratio (no fixed box,
   // no object-contain/object-cover) — ad screenshots come in every shape
@@ -214,11 +243,31 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
         <div className="flex flex-1 flex-col space-y-2 p-3">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate text-sm font-medium text-foreground">{ad.brandName}</span>
-            <span className="mono-tabular shrink-0 text-[11px] text-muted-foreground">
-              {relativeDays(ad.lastSeenAt)}
-            </span>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="mono-tabular text-[11px] text-muted-foreground">
+                {relativeDays(ad.lastSeenAt)}
+              </span>
+              {onToggleFollow && (
+                <button
+                  type="button"
+                  onClick={handleFollowClick}
+                  disabled={pending}
+                  aria-label={following ? `Unfollow ${ad.brandName}` : `Follow ${ad.brandName}`}
+                  title={following ? `Unfollow ${ad.brandName}` : `Follow ${ad.brandName}`}
+                  className={cn(
+                    "rounded p-0.5 text-muted-foreground transition-colors hover:text-accent disabled:opacity-50",
+                    following && "text-accent"
+                  )}
+                >
+                  <Heart className={cn("size-3.5", following && "fill-current")} />
+                </button>
+              )}
+            </div>
           </div>
           <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{ad.bodyCopy}</p>
+          {followError && (
+            <p className="text-[11px] leading-snug text-danger">{followError}</p>
+          )}
           <div className="mt-auto flex flex-wrap gap-1 pt-0.5">
             <Badge>{FORMAT_LABEL[ad.format]}</Badge>
             <Badge>{CTA_LABEL[ad.cta]}</Badge>

@@ -1,0 +1,109 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
+
+export const FREE_FOLLOW_LIMIT = 3;
+
+export type ToggleFollowResult = { error?: string; needsAuth?: boolean };
+
+/**
+ * Tracks the signed-in user and their followed brands, and exposes a
+ * toggleFollow() that inserts/deletes rows in `followed_brands`. The 3-brand
+ * free-tier cap is enforced by a Postgres trigger (see the init migration),
+ * not here — this just surfaces whatever error that trigger raises.
+ */
+export function useFollows() {
+  const [supabase] = useState(() => createClient());
+  // No supabase client means nothing to wait on — start "not loading"
+  // rather than flipping to false a tick later via an effect.
+  const [user, setUser] = useState<User | null>(null);
+  const [userLoading, setUserLoading] = useState(() => supabase !== null);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null);
+      setUserLoading(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [supabase]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Always resolve through a promise (even the "nothing to fetch" case)
+    // so every setFollowedIds call happens inside a .then callback rather
+    // than synchronously in the effect body.
+    const fetch =
+      supabase && user
+        ? supabase.from("followed_brands").select("brand_id")
+        : Promise.resolve({ data: [] as { brand_id: string }[], error: null });
+
+    fetch.then(({ data, error }) => {
+      if (cancelled || error) return;
+      setFollowedIds(new Set((data ?? []).map((row) => row.brand_id)));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, user]);
+
+  const toggleFollow = useCallback(
+    async (brandId: string, brandName: string): Promise<ToggleFollowResult> => {
+      if (!supabase || !user) return { needsAuth: true };
+      if (pendingIds.has(brandId)) return {};
+
+      setPendingIds((prev) => new Set(prev).add(brandId));
+      try {
+        if (followedIds.has(brandId)) {
+          const { error } = await supabase
+            .from("followed_brands")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("brand_id", brandId);
+          if (error) return { error: error.message };
+          setFollowedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(brandId);
+            return next;
+          });
+          return {};
+        }
+
+        const { error } = await supabase
+          .from("followed_brands")
+          .insert({ user_id: user.id, brand_id: brandId, brand_name: brandName });
+        if (error) {
+          // The free-tier cap trigger raises a plain, already-friendly
+          // message (errcode P0001) — just pass it through as-is.
+          return { error: error.message };
+        }
+        setFollowedIds((prev) => new Set(prev).add(brandId));
+        return {};
+      } finally {
+        setPendingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(brandId);
+          return next;
+        });
+      }
+    },
+    [supabase, user, followedIds, pendingIds]
+  );
+
+  return {
+    user,
+    userLoading,
+    followedIds,
+    pendingIds,
+    toggleFollow,
+    followCount: followedIds.size,
+  };
+}
