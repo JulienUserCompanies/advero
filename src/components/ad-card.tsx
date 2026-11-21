@@ -113,9 +113,9 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
   }
 
   return (
-    <div className="group overflow-hidden rounded-md border border-border bg-background-raised transition-colors hover:border-border-strong">
+    <div className="group flex h-full flex-col overflow-hidden rounded-md border border-border bg-background-raised transition-colors hover:border-border-strong">
       {thumb}
-      <div className="space-y-2 p-3">
+      <div className="flex flex-1 flex-col space-y-2 p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-medium text-foreground">{ad.brandName}</span>
           <span className="mono-tabular shrink-0 text-[11px] text-muted-foreground">
@@ -123,7 +123,7 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
           </span>
         </div>
         <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{ad.bodyCopy}</p>
-        <div className="flex flex-wrap gap-1 pt-0.5">
+        <div className="mt-auto flex flex-wrap gap-1 pt-0.5">
           <Badge>{FORMAT_LABEL[ad.format]}</Badge>
           <Badge>{CTA_LABEL[ad.cta]}</Badge>
           <Badge variant="accent">{ad.industry}</Badge>

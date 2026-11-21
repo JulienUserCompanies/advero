@@ -142,7 +142,7 @@ export function ArchiveClient({ ads }: { ads: Ad[] }) {
             <div
               className={
                 view === "gallery"
-                  ? "grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                  ? "grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                   : "flex flex-col gap-2"
               }
             >
