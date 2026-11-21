@@ -1,8 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PlatformDot } from "@/components/platform-dot";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/mock-data";
-import type { Ad } from "@/lib/types";
-import { Play, Images } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Ad, Platform } from "@/lib/types";
+import { Play, Images, Lock } from "lucide-react";
 
 const ARCHIVE_NOW = new Date("2026-11-20T00:00:00Z").getTime();
 
@@ -13,7 +18,15 @@ function relativeDays(iso: string) {
   return `${diff}d ago`;
 }
 
+// Platforms where the grid teases the ad instead of rendering it directly —
+// same pattern for both: the card shows brand/format/persona metadata only,
+// and the full creative renders in a dialog on click. Keeps the gallery
+// light and consistent regardless of why a given source is handled this way.
+const TEASED_PLATFORMS: Platform[] = ["linkedin", "apple"];
+
 export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
+  const [open, setOpen] = useState(false);
+  const teased = TEASED_PLATFORMS.includes(ad.platform);
   const hasRealMedia = Boolean(ad.mediaUrl);
 
   // Real creatives render at their own natural aspect ratio (no fixed box,
@@ -86,6 +99,27 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
     </div>
   );
 
+  // The grid-card version of a teased platform: no creative at all, just
+  // enough to recognize the ad and decide whether to open it.
+  const teaser = (
+    <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-t-md bg-background-overlay">
+      <div className="noise-grid absolute inset-0 opacity-30" />
+      <div className="relative flex flex-col items-center gap-1.5 px-4 text-center">
+        <Lock className="size-4 text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">Click to view ad</span>
+      </div>
+      <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur-sm">
+        <PlatformDot platform={ad.platform} />
+        <span className="text-[10px] font-medium text-white/90">{PLATFORM_LABEL[ad.platform]}</span>
+      </div>
+      {ad.status === "active" && (
+        <span className="absolute bottom-2 left-2 rounded-full border border-accent/40 bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+          Active · {ad.durationDays}d
+        </span>
+      )}
+    </div>
+  );
+
   if (view === "minimal") {
     return (
       <div className="flex items-center gap-3 rounded-md border border-border bg-background-raised p-2.5 transition-colors hover:border-border-strong">
@@ -113,22 +147,61 @@ export function AdCard({ ad, view }: { ad: Ad; view: "gallery" | "minimal" }) {
   }
 
   return (
-    <div className="group flex h-full flex-col overflow-hidden rounded-md border border-border bg-background-raised transition-colors hover:border-border-strong">
-      {thumb}
-      <div className="flex flex-1 flex-col space-y-2 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium text-foreground">{ad.brandName}</span>
-          <span className="mono-tabular shrink-0 text-[11px] text-muted-foreground">
-            {relativeDays(ad.lastSeenAt)}
-          </span>
-        </div>
-        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{ad.bodyCopy}</p>
-        <div className="mt-auto flex flex-wrap gap-1 pt-0.5">
-          <Badge>{FORMAT_LABEL[ad.format]}</Badge>
-          <Badge>{CTA_LABEL[ad.cta]}</Badge>
-          <Badge variant="accent">{ad.industry}</Badge>
+    <>
+      <div
+        role={teased ? "button" : undefined}
+        tabIndex={teased ? 0 : undefined}
+        onClick={teased ? () => setOpen(true) : undefined}
+        onKeyDown={
+          teased
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpen(true);
+                }
+              }
+            : undefined
+        }
+        className={cn(
+          "group flex h-full flex-col overflow-hidden rounded-md border border-border bg-background-raised transition-colors hover:border-border-strong",
+          teased && "cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+        )}
+      >
+        {teased ? teaser : thumb}
+        <div className="flex flex-1 flex-col space-y-2 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-sm font-medium text-foreground">{ad.brandName}</span>
+            <span className="mono-tabular shrink-0 text-[11px] text-muted-foreground">
+              {relativeDays(ad.lastSeenAt)}
+            </span>
+          </div>
+          <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{ad.bodyCopy}</p>
+          <div className="mt-auto flex flex-wrap gap-1 pt-0.5">
+            <Badge>{FORMAT_LABEL[ad.format]}</Badge>
+            <Badge>{CTA_LABEL[ad.cta]}</Badge>
+            <Badge variant="accent">{ad.industry}</Badge>
+          </div>
         </div>
       </div>
-    </div>
+
+      {teased && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogTitle className="text-sm font-semibold text-foreground">{ad.brandName}</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {PLATFORM_LABEL[ad.platform]} · {FORMAT_LABEL[ad.format]} · {relativeDays(ad.lastSeenAt)}
+            </DialogDescription>
+            <div className="mt-3 overflow-hidden rounded-md border border-border">{thumb}</div>
+            <p className="mt-3 text-sm font-medium text-foreground">{ad.headline}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{ad.bodyCopy}</p>
+            <div className="mt-3 flex flex-wrap gap-1">
+              <Badge>{FORMAT_LABEL[ad.format]}</Badge>
+              <Badge>{CTA_LABEL[ad.cta]}</Badge>
+              <Badge variant="accent">{ad.industry}</Badge>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }
