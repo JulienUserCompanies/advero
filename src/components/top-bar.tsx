@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -19,16 +20,18 @@ export function TopBar({
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
       <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
-        <div className="flex shrink-0 items-center gap-2">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
           <div className="flex size-6 items-center justify-center rounded bg-accent text-accent-foreground">
             <Terminal className="size-3.5" strokeWidth={2.5} />
           </div>
           <span className="mono-tabular text-sm font-semibold tracking-tight text-foreground">
             ADVERO
           </span>
-        </div>
+        </Link>
         <nav className="hidden items-center gap-1 text-sm text-muted-foreground md:flex">
-          <a className="rounded-md px-2.5 py-1.5 text-foreground">Archive</a>
+          <Link href="/archive" className="rounded-md px-2.5 py-1.5 text-foreground">
+            Archive
+          </Link>
           <a className="rounded-md px-2.5 py-1.5 hover:bg-background-raised hover:text-foreground">
             Saved Searches
           </a>
