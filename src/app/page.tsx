@@ -68,7 +68,7 @@ export default function Home() {
               <a href="#pricing">Pricing</a>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link href="/archive">Log in</Link>
+              <Link href="/login">Log in</Link>
             </Button>
             <Button asChild size="sm">
               <Link href="/archive">
@@ -132,7 +132,7 @@ export default function Home() {
         <section id="pricing" className="mx-auto w-full max-w-[1200px] px-4 py-20 lg:px-6">
           <div className="mx-auto max-w-xl text-center">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
-              Start free. Grow into Pro when you're tracking more than a few brands.
+              Start free. Grow into Pro when you&rsquo;re tracking more than a few brands.
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Every account gets the full archive — the limit is how many
@@ -156,7 +156,7 @@ export default function Home() {
                 ))}
               </ul>
               <Button asChild size="sm" variant="outline">
-                <Link href="/archive">Get started free</Link>
+                <Link href="/login?mode=sign-up">Get started free</Link>
               </Button>
             </div>
 

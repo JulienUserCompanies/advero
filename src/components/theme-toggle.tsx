@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "advero-theme";
 
 export function ThemeToggle() {
-  // Starts false (dark) to match the server-rendered class; the effect below
-  // reconciles with localStorage right after mount (the inline script in
-  // layout.tsx already set the class on <html> before paint, so there's no
-  // flash — this just syncs the icon/state to match it).
-  const [light, setLight] = useState(false);
-
-  useEffect(() => {
-    setLight(document.documentElement.classList.contains("light"));
-  }, []);
+  // Lazy initializer instead of an effect: the inline script in layout.tsx
+  // already set the class on <html> before paint (so there's no flash), and
+  // reading it here during the client's first render — rather than
+  // synchronously setState-ing inside a useEffect — just syncs the icon to
+  // match it without an extra render pass. On the server, `document` isn't
+  // defined, so this falls back to false (dark); that's fine, the real
+  // value is only needed once this renders in the browser.
+  const [light, setLight] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("light")
+  );
 
   function toggle() {
     setLight((prev) => {
