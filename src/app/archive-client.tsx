@@ -41,6 +41,7 @@ export function ArchiveClient({
   title = "Ad Archive",
   titleSuffix = "· every industry",
   emptyMessage = "No ads ingested yet — run one of the platform ingest jobs to populate the archive.",
+  extraContent,
 }: {
   ads: Ad[];
   /** Overridden by /dashboard ("My Brands") — /archive keeps the default. */
@@ -48,6 +49,8 @@ export function ArchiveClient({
   titleSuffix?: string;
   /** Shown when `ads` is empty outright (not just filtered to nothing). */
   emptyMessage?: ReactNode;
+  /** /dashboard's per-brand breakdown cards — rendered between the heading and the feed. */
+  extraContent?: ReactNode;
 }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>("gallery");
@@ -150,6 +153,8 @@ export function ArchiveClient({
               </TabsList>
             </Tabs>
           </div>
+
+          {extraContent}
 
           {pageItems.length === 0 ? (
             <div className="noise-grid flex flex-col items-center justify-center rounded-md border border-dashed border-border py-24 text-center">
