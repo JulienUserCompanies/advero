@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { TopBar } from "@/components/top-bar";
 import { FiltersSidebar, type FacetCount } from "@/components/filters-sidebar";
@@ -35,7 +36,19 @@ function countBy<T extends string>(ads: Ad[], key: (a: Ad) => T, labels: Record<
   }));
 }
 
-export function ArchiveClient({ ads }: { ads: Ad[] }) {
+export function ArchiveClient({
+  ads,
+  title = "Ad Archive",
+  titleSuffix = "· every industry",
+  emptyMessage = "No ads ingested yet — run one of the platform ingest jobs to populate the archive.",
+}: {
+  ads: Ad[];
+  /** Overridden by /dashboard ("My Brands") — /archive keeps the default. */
+  title?: string;
+  titleSuffix?: string;
+  /** Shown when `ads` is empty outright (not just filtered to nothing). */
+  emptyMessage?: ReactNode;
+}) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>("gallery");
   const [page, setPage] = useState(1);
@@ -121,7 +134,7 @@ export function ArchiveClient({ ads }: { ads: Ad[] }) {
         <main className="min-w-0 flex-1 px-4 py-4 lg:px-6">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-sm font-medium text-foreground">
-              Ad Archive <span className="text-muted-foreground">· every industry</span>
+              {title} <span className="text-muted-foreground">{titleSuffix}</span>
             </h1>
             <Tabs value={view} onValueChange={(v) => setView(v as View)}>
               <TabsList>
@@ -141,9 +154,7 @@ export function ArchiveClient({ ads }: { ads: Ad[] }) {
           {pageItems.length === 0 ? (
             <div className="noise-grid flex flex-col items-center justify-center rounded-md border border-dashed border-border py-24 text-center">
               <p className="text-sm text-muted-foreground">
-                {ads.length === 0
-                  ? "No ads ingested yet — run one of the platform ingest jobs to populate the archive."
-                  : "No ads match these filters."}
+                {ads.length === 0 ? emptyMessage : "No ads match these filters."}
               </p>
             </div>
           ) : view === "table" ? (

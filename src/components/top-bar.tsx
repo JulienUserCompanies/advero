@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { isAdminEmail } from "@/lib/admin";
+import { cn } from "@/lib/utils";
 import { Search, Bell, Terminal, Heart } from "lucide-react";
 
 export function TopBar({
@@ -25,6 +27,15 @@ export function TopBar({
   followCount?: number;
   followLimit?: number;
 }) {
+  const pathname = usePathname();
+  const navLinkClass = (href: string) =>
+    cn(
+      "rounded-md px-2.5 py-1.5",
+      pathname === href
+        ? "text-foreground"
+        : "hover:bg-background-raised hover:text-foreground"
+    );
+
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
       <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
@@ -37,8 +48,11 @@ export function TopBar({
           </span>
         </Link>
         <nav className="hidden items-center gap-1 text-sm text-muted-foreground md:flex">
-          <Link href="/archive" className="rounded-md px-2.5 py-1.5 text-foreground">
+          <Link href="/archive" className={navLinkClass("/archive")}>
             Archive
+          </Link>
+          <Link href="/dashboard" className={navLinkClass("/dashboard")}>
+            My Brands
           </Link>
           <a className="rounded-md px-2.5 py-1.5 hover:bg-background-raised hover:text-foreground">
             Saved Searches
