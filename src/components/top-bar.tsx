@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { isAdminEmail } from "@/lib/admin";
 import { Search, Bell, Terminal, Heart } from "lucide-react";
 
 export function TopBar({
@@ -45,6 +46,14 @@ export function TopBar({
           <a className="rounded-md px-2.5 py-1.5 hover:bg-background-raised hover:text-foreground">
             Alerts
           </a>
+          {isAdminEmail(user?.email) && (
+            <Link
+              href="/admin/linkedin"
+              className="rounded-md px-2.5 py-1.5 hover:bg-background-raised hover:text-foreground"
+            >
+              Add LinkedIn ads
+            </Link>
+          )}
         </nav>
         <div className="relative ml-auto w-full max-w-md">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
