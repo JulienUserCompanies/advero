@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { PlatformDot } from "@/components/platform-dot";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/mock-data";
+import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import type { Ad, Platform } from "@/lib/types";
 import type { ToggleFollowResult } from "@/lib/use-follows";
@@ -64,8 +64,8 @@ export function AdCard({
   // forcing them into one fixed ratio either crops them or surrounds them
   // with big empty bars. Letting the <img>/<video> size itself keeps the
   // whole ad visible and fills the card. Only the no-media placeholder
-  // (mock data, or a row with no asset yet) needs a fixed box, since a
-  // flat color swatch has no intrinsic size of its own.
+  // (a row with no creative_asset yet) needs a fixed box, since a flat
+  // color swatch has no intrinsic size of its own.
   const thumb = hasRealMedia ? (
     // The box itself is sized to 80% of the card (not full-width with the
     // image floating smaller inside it), so there's no painted margin

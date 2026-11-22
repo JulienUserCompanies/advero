@@ -1,5 +1,5 @@
 import { PlatformDot } from "@/components/platform-dot";
-import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/mock-data";
+import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/labels";
 import type { Ad } from "@/lib/types";
 
 export function AdTable({ ads }: { ads: Ad[] }) {

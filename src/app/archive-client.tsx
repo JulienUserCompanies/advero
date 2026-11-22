@@ -14,7 +14,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/mock-data";
+import { PLATFORM_LABEL, FORMAT_LABEL, CTA_LABEL } from "@/lib/labels";
 import type { Ad, Platform, AdFormat, CtaType } from "@/lib/types";
 import { useFollows, FREE_FOLLOW_LIMIT } from "@/lib/use-follows";
 import { LayoutGrid, Rows3, Table2 } from "lucide-react";
@@ -140,7 +140,11 @@ export function ArchiveClient({ ads }: { ads: Ad[] }) {
 
           {pageItems.length === 0 ? (
             <div className="noise-grid flex flex-col items-center justify-center rounded-md border border-dashed border-border py-24 text-center">
-              <p className="text-sm text-muted-foreground">No ads match these filters.</p>
+              <p className="text-sm text-muted-foreground">
+                {ads.length === 0
+                  ? "No ads ingested yet — run one of the platform ingest jobs to populate the archive."
+                  : "No ads match these filters."}
+              </p>
             </div>
           ) : view === "table" ? (
             <AdTable ads={pageItems} />

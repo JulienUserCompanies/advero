@@ -1,10 +1,9 @@
 import { d1Query, D1_CONFIGURED } from "./d1";
-import { generateMockAds, brandsWithCounts as mockBrandsWithCounts } from "./mock-data";
 import type { Ad, AdFormat, Brand, CtaType, EmotionalAngle, Platform } from "./types";
 
-// Same fixed swatch palette the mock generator uses. D1 doesn't store a
-// swatch column (it's a pure UI accent), so we derive a stable pick per ad
-// from its id — same ad always renders the same colors across requests.
+// D1 doesn't store a swatch column (it's a pure UI accent), so we derive a
+// stable pick per ad from its id — same ad always renders the same colors
+// across requests.
 const SWATCHES: [string, string][] = [
   ["#1d2b20", "#b4ff39"],
   ["#241b2e", "#c77dff"],
@@ -120,30 +119,27 @@ function brandsFromAds(ads: Ad[]): Brand[] {
 }
 
 /**
- * Loads ads + brands for the archive. Reads live from Cloudflare D1 when
- * configured; otherwise falls back to the deterministic mock generator so
- * local dev and previews without secrets still render something.
+ * Loads ads + brands for the archive — always live from Cloudflare D1, no
+ * mock-data fallback. If D1 isn't configured or the query fails, this
+ * returns an empty archive rather than fabricated ads, so the UI reflects
+ * what's actually real.
  */
-export async function getArchiveData(): Promise<{ ads: Ad[]; brands: Brand[]; source: "d1" | "mock" }> {
-  if (D1_CONFIGURED) {
-    try {
-      const ads = await fetchAdsFromD1();
-      console.log(`[d1] query ok, rows=${ads.length}`);
-      if (ads.length > 0) {
-        return { ads, brands: brandsFromAds(ads), source: "d1" };
-      }
-      console.warn("[d1] D1 returned 0 rows — falling back to mock data");
-    } catch (err) {
-      console.error("[d1] Falling back to mock ads — D1 fetch failed:", err);
-    }
-  } else {
+export async function getArchiveData(): Promise<{ ads: Ad[]; brands: Brand[]; source: "d1" | "empty" }> {
+  if (!D1_CONFIGURED) {
     console.warn(
       `[d1] not configured — account=${Boolean(process.env.CLOUDFLARE_ACCOUNT_ID)} token=${Boolean(
         process.env.CLOUDFLARE_API_TOKEN
       )} db=${Boolean(process.env.CLOUDFLARE_D1_DATABASE_ID)}`
     );
+    return { ads: [], brands: [], source: "empty" };
   }
 
-  const ads = generateMockAds();
-  return { ads, brands: mockBrandsWithCounts(ads), source: "mock" };
+  try {
+    const ads = await fetchAdsFromD1();
+    console.log(`[d1] query ok, rows=${ads.length}`);
+    return { ads, brands: brandsFromAds(ads), source: "d1" };
+  } catch (err) {
+    console.error("[d1] D1 fetch failed:", err);
+    return { ads: [], brands: [], source: "empty" };
+  }
 }
