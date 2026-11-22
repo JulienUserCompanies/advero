@@ -48,10 +48,10 @@ export function TopBar({
           </a>
           {isAdminEmail(user?.email) && (
             <Link
-              href="/admin/linkedin"
+              href="/admin/ads"
               className="rounded-md px-2.5 py-1.5 hover:bg-background-raised hover:text-foreground"
             >
-              Add LinkedIn ads
+              Add ads
             </Link>
           )}
         </nav>

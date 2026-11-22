@@ -9,7 +9,7 @@ import { IngestForm } from "./ingest-form";
 // prerender a page whose content depends on cookies().
 export const instant = false;
 
-export default async function LinkedInAdminPage() {
+export default async function AdsAdminPage() {
   const supabase = await createClient();
   const user = supabase ? (await supabase.auth.getUser()).data.user : null;
 
@@ -31,13 +31,11 @@ export default async function LinkedInAdminPage() {
       <Link href="/archive" className="text-xs text-muted-foreground hover:text-foreground">
         ← Back to the archive
       </Link>
-      <h1 className="mt-4 text-sm font-medium text-foreground">Add LinkedIn ads</h1>
+      <h1 className="mt-4 text-sm font-medium text-foreground">Add ads</h1>
       <p className="mt-1 text-xs text-muted-foreground">
-        LinkedIn has no API for competitor ad data, so this is manual: open{" "}
-        <code className="rounded bg-background-overlay px-1 py-0.5">linkedin.com/ad-library/search</code>{" "}
-        in your own browser, search for a competitor, scroll to load the ads you want, then view the
-        page source (or copy the <code className="rounded bg-background-overlay px-1 py-0.5">&lt;html&gt;</code>{" "}
-        element&rsquo;s outer HTML) and paste it below.
+        For platforms with no usable competitor-search API (or where our own API access isn&rsquo;t
+        approved yet), this is manual: pick a platform below, open its Ad Library in your own browser,
+        and paste in the saved page&rsquo;s HTML.
       </p>
       <div className="mt-6">
         <IngestForm />
