@@ -21,7 +21,10 @@ export interface ParsedLinkedInAd {
   headline: string | null;
   bodyCopy: string | null;
   mediaUrl: string | null;
-  mediaKind: "image" | "video" | null;
+  // Always "image" in practice (see the note where this is set) — kept
+  // nullable rather than widened to a bare boolean so a future addition of
+  // real video support doesn't require touching every call site.
+  mediaKind: "image" | null;
 }
 
 function textOrNull($el: cheerio.Cheerio<AnyNode>): string | null {
@@ -62,18 +65,21 @@ export function parseLinkedInAdLibraryHtml(html: string): ParsedLinkedInAd[] {
     const bodyCopy = textOrNull($card.find(".commentary__content"));
     const headline = textOrNull($card.find(".sponsored-content-headline h2"));
 
-    let mediaUrl: string | null = null;
-    let mediaKind: "image" | "video" | null = null;
-    if (creativeType === "SPONSORED_VIDEO") {
-      mediaUrl = $card.find("img.ad-preview__dynamic-dimensions-image").first().attr("data-delayed-url") ?? null;
-      mediaKind = mediaUrl ? "video" : null;
-    } else {
-      mediaUrl =
-        $card.find('a[data-tracking-control-name="ad_library_ad_preview_content_image"] img').first().attr("data-delayed-url") ??
-        $card.find("img.ad-preview__dynamic-dimensions-image").first().attr("data-delayed-url") ??
-        null;
-      mediaKind = mediaUrl ? "image" : null;
-    }
+    // Always "image", never "video", even for a SPONSORED_VIDEO card: the
+    // search-results HTML only has the video's still cover frame (an
+    // <img>) — the actual playable video file isn't in this page at all,
+    // it's loaded separately when LinkedIn's own player initializes.
+    // Storing that cover frame as mediaKind "video" made ad-card.tsx render
+    // a <video> tag pointed at a JPEG, which can't play — hence "the video
+    // isn't showing". Treating it as a static image (the cover shot) is
+    // the honest fix; a real video asset isn't something we have.
+    const mediaUrl =
+      creativeType === "SPONSORED_VIDEO"
+        ? $card.find("img.ad-preview__dynamic-dimensions-image").first().attr("data-delayed-url") ?? null
+        : $card.find('a[data-tracking-control-name="ad_library_ad_preview_content_image"] img').first().attr("data-delayed-url") ??
+          $card.find("img.ad-preview__dynamic-dimensions-image").first().attr("data-delayed-url") ??
+          null;
+    const mediaKind: "image" | null = mediaUrl ? "image" : null;
 
     ads.push({
       externalAdId: adIdMatch[1],

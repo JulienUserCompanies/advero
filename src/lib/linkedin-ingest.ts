@@ -52,7 +52,7 @@ async function upsertAd(brandId: string, ad: ReturnType<typeof parseLinkedInAdLi
     await d1Query(
       `INSERT INTO creative_asset (id, ad_id, type, storage_url)
        VALUES (?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET storage_url = excluded.storage_url`,
+       ON CONFLICT(id) DO UPDATE SET type = excluded.type, storage_url = excluded.storage_url`,
       [`ca-${localId}`, localId, ad.mediaKind ?? "image", ad.mediaUrl]
     );
   }
