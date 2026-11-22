@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ArchiveClient } from "../archive-client";
 import { getArchiveData } from "@/lib/get-ads";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/admin";
 
 // This page reads cookies() (via the Supabase server client) to check the
 // session before rendering, so it can't be part of the static prerendered
@@ -10,6 +11,10 @@ import { createClient } from "@/lib/supabase/server";
 // whole page (not just a slice of it) depends on whether there's a user.
 export const instant = false;
 
+// Admin-only: regular accounts get /dashboard, scoped to the (up to 3)
+// competitors they're tracking, plus the per-brand breakdown — browsing
+// every brand in the catalog is the admin/curation view now, not the
+// product a signed-up user gets.
 export default async function ArchivePage() {
   const supabase = await createClient();
 
@@ -18,6 +23,7 @@ export default async function ArchivePage() {
   if (supabase) {
     const { data } = await supabase.auth.getUser();
     if (!data.user) redirect("/login");
+    if (!isAdminEmail(data.user.email)) redirect("/dashboard");
   }
 
   const { ads } = await getArchiveData();

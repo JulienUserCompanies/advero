@@ -31,6 +31,38 @@ export interface BrandBreakdown {
   themes: ThemeBreakdown[];
 }
 
+export interface BrandOption {
+  name: string;
+  brandIds: string[];
+  platforms: Platform[];
+  adCount: number;
+}
+
+/**
+ * A name-only directory for the "follow a competitor" search on /dashboard
+ * — brand name, platforms, how many platform-specific rows it resolves to,
+ * ad count. Deliberately carries no creative (headline, body, media): this
+ * is what lets that search exist without it being "the archive" (no
+ * individual ad content, nothing to browse).
+ */
+export function listBrandOptions(ads: Ad[]): BrandOption[] {
+  const byName = new Map<string, Ad[]>();
+  for (const ad of ads) {
+    const key = ad.brandName.trim().toLowerCase();
+    if (!byName.has(key)) byName.set(key, []);
+    byName.get(key)!.push(ad);
+  }
+
+  return Array.from(byName.values())
+    .map((group): BrandOption => ({
+      name: group[0].brandName,
+      brandIds: Array.from(new Set(group.map((a) => a.brandId))),
+      platforms: Array.from(new Set(group.map((a) => a.platform))),
+      adCount: group.length,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function buildBrandBreakdowns(ads: Ad[]): BrandBreakdown[] {
   const byName = new Map<string, Ad[]>();
   for (const ad of ads) {

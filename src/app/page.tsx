@@ -71,8 +71,8 @@ export default function Home() {
               <Link href="/login">Log in</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/archive">
-                Browse the archive
+              <Link href="/dashboard">
+                Track your competitors
                 <ArrowRight className="size-3.5" />
               </Link>
             </Button>
@@ -97,8 +97,8 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button asChild size="default">
-                <Link href="/archive">
-                  Browse the archive — free
+                <Link href="/dashboard">
+                  Track your competitors — free
                   <ArrowRight className="size-3.5" />
                 </Link>
               </Button>
@@ -190,8 +190,8 @@ export default function Home() {
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col items-center justify-between gap-3 px-4 py-6 text-xs text-muted-foreground sm:flex-row lg:px-6">
           <span>© 2026 Advero.</span>
-          <Link href="/archive" className="hover:text-foreground">
-            Browse the archive
+          <Link href="/dashboard" className="hover:text-foreground">
+            Track your competitors
           </Link>
         </div>
       </footer>

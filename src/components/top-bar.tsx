@@ -48,12 +48,14 @@ export function TopBar({
           </span>
         </Link>
         <nav className="hidden items-center gap-1 text-sm text-muted-foreground md:flex">
-          <Link href="/archive" className={navLinkClass("/archive")}>
-            Archive
-          </Link>
           <Link href="/dashboard" className={navLinkClass("/dashboard")}>
             My Brands
           </Link>
+          {isAdminEmail(user?.email) && (
+            <Link href="/archive" className={navLinkClass("/archive")}>
+              Archive
+            </Link>
+          )}
           <a className="rounded-md px-2.5 py-1.5 hover:bg-background-raised hover:text-foreground">
             Saved Searches
           </a>

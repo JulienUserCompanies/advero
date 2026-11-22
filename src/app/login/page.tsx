@@ -49,7 +49,7 @@ function LoginForm() {
         setError(error.message);
         return;
       }
-      router.push("/archive");
+      router.push("/dashboard");
       router.refresh();
     } else {
       const { data, error } = await supabase.auth.signUp({ email, password });
@@ -64,7 +64,7 @@ function LoginForm() {
         setCheckEmail(true);
         return;
       }
-      router.push("/archive");
+      router.push("/dashboard");
       router.refresh();
     }
   }

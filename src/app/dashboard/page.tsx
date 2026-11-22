@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArchiveClient } from "../archive-client";
 import { getArchiveData } from "@/lib/get-ads";
 import { createClient } from "@/lib/supabase/server";
-import { buildBrandBreakdowns } from "@/lib/brand-breakdown";
+import { buildBrandBreakdowns, listBrandOptions } from "@/lib/brand-breakdown";
 import { BrandBreakdownCard } from "@/components/brand-breakdown-card";
+import { BrandSearch } from "@/components/brand-search";
 
 // Same reasoning as archive/page.tsx: reads cookies() via the Supabase
 // server client to check the session, so it can't be part of the static
@@ -38,29 +38,29 @@ export default async function DashboardPage() {
   // silently show the whole archive under the "My Brands" heading.
   const myAds = followedBrandIds ? ads.filter((ad) => followedBrandIds!.has(ad.brandId)) : [];
   const breakdowns = buildBrandBreakdowns(myAds);
+  // Deliberately built from the FULL archive (every brand, every platform),
+  // not myAds — this is the one place a signed-in user can still discover a
+  // brand they don't follow yet, now that /archive itself is admin-only.
+  // listBrandOptions strips it down to name/platforms/count, no ad content.
+  const brandOptions = listBrandOptions(ads);
 
   return (
     <ArchiveClient
       ads={myAds}
       title="My Brands"
-      titleSuffix={`· ${new Set(myAds.map((a) => a.brandId)).size} followed`}
-      emptyMessage={
-        <>
-          You haven&rsquo;t followed any brands yet —{" "}
-          <Link href="/archive" className="text-foreground underline underline-offset-2">
-            browse the archive
-          </Link>{" "}
-          and click the heart icon on a brand&rsquo;s ads to track it here.
-        </>
-      }
+      titleSuffix={`· ${new Set(myAds.map((a) => a.brandId)).size} tracked`}
+      emptyMessage="You're not tracking any competitors yet — search for one above to get started."
       extraContent={
-        breakdowns.length > 0 ? (
-          <div className="mb-5 flex flex-col gap-3">
-            {breakdowns.map((brand) => (
-              <BrandBreakdownCard key={brand.name} brand={brand} />
-            ))}
-          </div>
-        ) : undefined
+        <>
+          <BrandSearch options={brandOptions} />
+          {breakdowns.length > 0 && (
+            <div className="mb-5 flex flex-col gap-3">
+              {breakdowns.map((brand) => (
+                <BrandBreakdownCard key={brand.name} brand={brand} />
+              ))}
+            </div>
+          )}
+        </>
       }
     />
   );

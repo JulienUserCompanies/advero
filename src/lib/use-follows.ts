@@ -21,7 +21,13 @@ export function useFollows() {
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(() => supabase !== null);
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  // Lowercased brand_name per followed row, kept alongside followedIds so
+  // the "follow a competitor by name" search (BrandSearch) can tell
+  // whether a name is already tracked without caring which platform-
+  // specific brand_id rows that expands to under the hood.
+  const [followedNames, setFollowedNames] = useState<Set<string>>(new Set());
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [pendingNames, setPendingNames] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!supabase) return;
@@ -42,12 +48,13 @@ export function useFollows() {
     // than synchronously in the effect body.
     const fetch =
       supabase && user
-        ? supabase.from("followed_brands").select("brand_id")
-        : Promise.resolve({ data: [] as { brand_id: string }[], error: null });
+        ? supabase.from("followed_brands").select("brand_id, brand_name")
+        : Promise.resolve({ data: [] as { brand_id: string; brand_name: string | null }[], error: null });
 
     fetch.then(({ data, error }) => {
       if (cancelled || error) return;
       setFollowedIds(new Set((data ?? []).map((row) => row.brand_id)));
+      setFollowedNames(new Set((data ?? []).map((row) => (row.brand_name ?? "").trim().toLowerCase()).filter(Boolean)));
     });
 
     return () => {
@@ -98,12 +105,98 @@ export function useFollows() {
     [supabase, user, followedIds, pendingIds]
   );
 
+  /**
+   * Follows a competitor by NAME: inserts one followed_brands row per
+   * underlying brand_id (one per platform that name resolves to), so
+   * following "GDC" once covers its LinkedIn row and its Facebook row
+   * together rather than requiring two separate follow actions. The free
+   * cap (enforced server-side too — see the migration) counts this as ONE
+   * brand regardless of how many rows it expands to.
+   */
+  const followByName = useCallback(
+    async (name: string, brandIds: string[]): Promise<ToggleFollowResult> => {
+      if (!supabase || !user) return { needsAuth: true };
+      const key = name.trim().toLowerCase();
+      if (pendingNames.has(key) || followedNames.has(key)) return {};
+
+      setPendingNames((prev) => new Set(prev).add(key));
+      try {
+        const rows = brandIds
+          .filter((id) => !followedIds.has(id))
+          .map((id) => ({ user_id: user.id, brand_id: id, brand_name: name }));
+        if (rows.length === 0) return {};
+
+        const { error } = await supabase.from("followed_brands").insert(rows);
+        if (error) return { error: error.message };
+
+        setFollowedIds((prev) => {
+          const next = new Set(prev);
+          for (const id of brandIds) next.add(id);
+          return next;
+        });
+        setFollowedNames((prev) => new Set(prev).add(key));
+        return {};
+      } finally {
+        setPendingNames((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+    },
+    [supabase, user, followedIds, followedNames, pendingNames]
+  );
+
+  /** Unfollows every row sharing this brand name — see followByName. */
+  const unfollowByName = useCallback(
+    async (name: string): Promise<ToggleFollowResult> => {
+      if (!supabase || !user) return { needsAuth: true };
+      const key = name.trim().toLowerCase();
+      if (pendingNames.has(key)) return {};
+
+      setPendingNames((prev) => new Set(prev).add(key));
+      try {
+        const { data, error } = await supabase
+          .from("followed_brands")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("brand_name", name)
+          .select("brand_id");
+        if (error) return { error: error.message };
+
+        const removedIds = new Set((data ?? []).map((row) => row.brand_id));
+        setFollowedIds((prev) => {
+          const next = new Set(prev);
+          for (const id of removedIds) next.delete(id);
+          return next;
+        });
+        setFollowedNames((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+        return {};
+      } finally {
+        setPendingNames((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+    },
+    [supabase, user, pendingNames]
+  );
+
   return {
     user,
     userLoading,
     followedIds,
+    followedNames,
     pendingIds,
+    pendingNames,
     toggleFollow,
-    followCount: followedIds.size,
+    followByName,
+    unfollowByName,
+    followCount: followedNames.size,
   };
 }
