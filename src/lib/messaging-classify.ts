@@ -114,6 +114,58 @@ export async function classifyAdMessaging(
   }
 }
 
+export interface ClassifyDebugResult {
+  configured: boolean;
+  status?: number;
+  ok?: boolean;
+  rawBody?: string;
+  parsedText?: string;
+  error?: string;
+}
+
+/**
+ * Same call as classifyAdMessaging, but surfaces exactly what OpenRouter
+ * returned instead of swallowing it into null — for the backfill route's
+ * ?debug=1 mode. Not used by ingestion; only for diagnosing a run that
+ * comes back with classified:0.
+ */
+export async function classifyAdMessagingDebug(
+  headline: string | null,
+  bodyCopy: string | null
+): Promise<ClassifyDebugResult> {
+  if (!API_KEY) return { configured: false };
+  const text = [headline, bodyCopy].filter((v): v is string => Boolean(v && v.trim())).join("\n").trim();
+  if (!text) return { configured: true, error: "no headline/body text to classify" };
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${API_KEY}`,
+        "content-type": "application/json",
+        "http-referer": "https://advero-sage.vercel.app",
+        "x-title": "Advero",
+      },
+      body: JSON.stringify({
+        model: "openrouter/free",
+        max_tokens: 100,
+        messages: [{ role: "user", content: buildPrompt(text) }],
+      }),
+    });
+    const rawBody = await res.text();
+    let parsedText: string | undefined;
+    try {
+      const json = JSON.parse(rawBody);
+      parsedText = json?.choices?.[0]?.message?.content;
+    } catch {
+      // rawBody wasn't JSON — leave parsedText undefined, rawBody shows why.
+    }
+    return { configured: true, status: res.status, ok: res.ok, rawBody: rawBody.slice(0, 1500), parsedText };
+  } catch (err) {
+    return { configured: true, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 async function saveMessagingTags(adId: string, result: MessagingClassification): Promise<void> {
   await d1Query(
     `INSERT INTO tag (id, ad_id, taxonomy, value, confidence)

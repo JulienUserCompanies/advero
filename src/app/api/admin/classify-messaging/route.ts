@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CLASSIFIER_CONFIGURED, classifyAndTagAds, findUnclassifiedAds } from "@/lib/messaging-classify";
+import {
+  CLASSIFIER_CONFIGURED,
+  classifyAdMessagingDebug,
+  classifyAndTagAds,
+  findUnclassifiedAds,
+} from "@/lib/messaging-classify";
 
 export const maxDuration = 60;
 
@@ -26,6 +31,16 @@ export async function POST(req: NextRequest) {
       { error: "OPENROUTER_API_KEY is not set — nothing to backfill" },
       { status: 400 }
     );
+  }
+
+  // ?debug=1: classifies ONE ad and returns exactly what OpenRouter sent
+  // back (status code, raw body) instead of the usual silent null-on-failure
+  // — for diagnosing a run that comes back with classified:0.
+  if (req.nextUrl.searchParams.get("debug") === "1") {
+    const [sample] = await findUnclassifiedAds(1);
+    if (!sample) return NextResponse.json({ error: "no unclassified ads to test with" });
+    const debug = await classifyAdMessagingDebug(sample.headline, sample.bodyCopy);
+    return NextResponse.json({ adId: sample.id, ...debug });
   }
 
   const batch = await findUnclassifiedAds(40);
