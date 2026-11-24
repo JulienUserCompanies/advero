@@ -56,6 +56,9 @@ export function TopBar({
               Archive
             </Link>
           )}
+          <Link href="/trends" className={navLinkClass("/trends")}>
+            Trends
+          </Link>
           <a className="rounded-md px-2.5 py-1.5 hover:bg-background-raised hover:text-foreground">
             Saved Searches
           </a>

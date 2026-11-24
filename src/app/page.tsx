@@ -65,6 +65,9 @@ export default function Home() {
           </Link>
           <nav className="ml-auto flex items-center gap-2">
             <Button asChild size="sm" variant="ghost">
+              <Link href="/trends">Trends</Link>
+            </Button>
+            <Button asChild size="sm" variant="ghost">
               <a href="#pricing">Pricing</a>
             </Button>
             <Button asChild size="sm" variant="outline">
