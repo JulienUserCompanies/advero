@@ -1,4 +1,13 @@
-import type { Ad, Platform } from "./types";
+import type { Ad, EmotionalAngle, Platform } from "./types";
+
+export const ANGLE_ORDER: EmotionalAngle[] = [
+  "pain_point",
+  "aspirational",
+  "social_proof",
+  "urgency",
+  "curiosity",
+  "trust",
+];
 
 // The automatic, in-app version of the kind of breakdown a one-off report
 // gives: per-brand themes, format mix, active-campaign count. Only used on
@@ -21,6 +30,17 @@ export interface ThemeBreakdown {
   platforms: Platform[];
 }
 
+export interface MessagingStyle {
+  /** How many ads in this brand's group have actually been classified — out of adCount. */
+  classifiedCount: number;
+  /** Angle -> count, among classified ads only. Omitted (empty) when classifiedCount is 0. */
+  angleMix: Partial<Record<EmotionalAngle, number>>;
+  /** The single most common angle, or null if nothing's been classified yet. */
+  dominantAngle: EmotionalAngle | null;
+  /** How many distinct angles this brand is running concurrently — a rough "still testing" vs "locked in" signal. */
+  angleDiversity: number;
+}
+
 export interface BrandBreakdown {
   name: string;
   brandIds: string[];
@@ -29,6 +49,7 @@ export interface BrandBreakdown {
   activeCount: number;
   formatMix: Partial<Record<Ad["mediaKind"], number>>;
   themes: ThemeBreakdown[];
+  messaging: MessagingStyle;
 }
 
 export interface BrandOption {
@@ -101,6 +122,17 @@ export function buildBrandBreakdowns(ads: Ad[]): BrandBreakdown[] {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
+      const classified = group.filter((a) => a.messagingClassified);
+      const angleMix: Partial<Record<EmotionalAngle, number>> = {};
+      for (const ad of classified) {
+        angleMix[ad.emotionalAngle] = (angleMix[ad.emotionalAngle] ?? 0) + 1;
+      }
+      const angleEntries = Object.entries(angleMix) as [EmotionalAngle, number][];
+      const dominantAngle =
+        angleEntries.length > 0
+          ? angleEntries.sort((a, b) => b[1] - a[1])[0][0]
+          : null;
+
       return {
         name: group[0].brandName,
         brandIds: Array.from(new Set(group.map((a) => a.brandId))),
@@ -109,6 +141,12 @@ export function buildBrandBreakdowns(ads: Ad[]): BrandBreakdown[] {
         activeCount,
         formatMix,
         themes,
+        messaging: {
+          classifiedCount: classified.length,
+          angleMix,
+          dominantAngle,
+          angleDiversity: angleEntries.length,
+        },
       };
     })
     .sort((a, b) => b.adCount - a.adCount);

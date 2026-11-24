@@ -1,5 +1,6 @@
 import { d1Query } from "./d1";
 import { parseLinkedInAdLibraryHtml } from "./linkedin-parse";
+import { classifyAndTagAds } from "./messaging-classify";
 
 // Unlike Meta and Apple, LinkedIn has no official, queryable API for
 // third-party competitor ad data — see linkedin-parse.ts. So this isn't a
@@ -27,7 +28,7 @@ async function upsertBrand(advertiserName: string): Promise<string> {
   return id;
 }
 
-async function upsertAd(brandId: string, ad: ReturnType<typeof parseLinkedInAdLibraryHtml>[number]): Promise<void> {
+async function upsertAd(brandId: string, ad: ReturnType<typeof parseLinkedInAdLibraryHtml>[number]): Promise<string> {
   const localId = `linkedin-${ad.externalAdId}`;
   const now = new Date().toISOString();
 
@@ -56,11 +57,14 @@ async function upsertAd(brandId: string, ad: ReturnType<typeof parseLinkedInAdLi
       [`ca-${localId}`, localId, ad.mediaKind ?? "image", ad.mediaUrl]
     );
   }
+
+  return localId;
 }
 
 export interface LinkedInIngestResult {
   adsFound: number;
   adsIngested: number;
+  adsClassified: number;
   brands: string[];
   error?: string;
 }
@@ -74,11 +78,11 @@ export interface LinkedInIngestResult {
 export async function ingestLinkedInHtml(html: string): Promise<LinkedInIngestResult> {
   const ads = parseLinkedInAdLibraryHtml(html);
   if (ads.length === 0) {
-    return { adsFound: 0, adsIngested: 0, brands: [], error: "No ad cards found in the pasted HTML" };
+    return { adsFound: 0, adsIngested: 0, adsClassified: 0, brands: [], error: "No ad cards found in the pasted HTML" };
   }
 
   const brandIdByName = new Map<string, string>();
-  let adsIngested = 0;
+  const ingested: { id: string; headline: string | null; bodyCopy: string | null }[] = [];
 
   for (const ad of ads) {
     try {
@@ -87,16 +91,23 @@ export async function ingestLinkedInHtml(html: string): Promise<LinkedInIngestRe
         brandId = await upsertBrand(ad.advertiserName);
         brandIdByName.set(ad.advertiserName, brandId);
       }
-      await upsertAd(brandId, ad);
-      adsIngested += 1;
+      const localId = await upsertAd(brandId, ad);
+      ingested.push({ id: localId, headline: ad.headline, bodyCopy: ad.bodyCopy });
     } catch {
       // Keep going — one bad row shouldn't drop the rest of the paste.
     }
   }
 
+  // Messaging-style classification (see messaging-classify.ts): best-effort,
+  // skipped entirely if ANTHROPIC_API_KEY isn't set. Kept inline rather than
+  // fire-and-forget so the response's adsClassified count is accurate — the
+  // route's maxDuration is sized to cover this.
+  const adsClassified = await classifyAndTagAds(ingested);
+
   return {
     adsFound: ads.length,
-    adsIngested,
+    adsIngested: ingested.length,
+    adsClassified,
     brands: Array.from(brandIdByName.keys()),
   };
 }

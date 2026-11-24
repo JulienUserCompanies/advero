@@ -1,4 +1,5 @@
 import { d1Query } from "./d1";
+import { classifyAndTagAds } from "./messaging-classify";
 
 // Apple Ad Repository API — official, documented, no authentication required.
 // https://developer.apple.com/support/downloads/Ad-Repository.pdf
@@ -97,7 +98,7 @@ async function upsertBrand(entity: Entity): Promise<string> {
   return id;
 }
 
-async function upsertAd(brandId: string, ad: AppleAd): Promise<void> {
+async function upsertAd(brandId: string, ad: AppleAd): Promise<{ id: string; headline: string | null; bodyCopy: string | null }> {
   const localId = `apple-${ad.adId}`;
   const headline = ad.appName ?? null;
   const bodyCopy = ad.adBanner?.promotionalText ?? null;
@@ -130,19 +131,23 @@ async function upsertAd(brandId: string, ad: AppleAd): Promise<void> {
       [`ca-${localId}`, localId, type, assetUrl, primaryAsset?.orientation ?? null]
     );
   }
+
+  return { id: localId, headline, bodyCopy };
 }
 
 export interface AppleIngestResult {
   query: string;
   entityFound: boolean;
   adsSeen: number;
+  adsClassified: number;
   error?: string;
 }
 
 /**
  * Resolves ONE seed app/developer name to an Apple entity id, pulls its
- * recent EU App Store ads, and upserts brand/ad/creative_asset rows into D1.
- * No tags written — same convention as the Meta ingestion module.
+ * recent EU App Store ads, and upserts brand/ad/creative_asset rows into D1,
+ * then runs messaging-style classification (see messaging-classify.ts) over
+ * them — best-effort and skipped entirely without ANTHROPIC_API_KEY.
  *
  * Deliberately processes a single query per call: Apple's repository needs
  * ~5s between requests to avoid 429s, and a serverless function's own time
@@ -150,23 +155,27 @@ export interface AppleIngestResult {
  * pair (each potentially needing its own 5s retry) per invocation. Callers
  * that want to cover a whole seed list should call this once per name —
  * see the cron route's day-rotation for how the daily job covers a list
- * over time without needing a long-running batch.
+ * over time without needing a long-running batch. Classification runs with
+ * lower concurrency (2) here than the other ingestion paths, to leave
+ * headroom in that same tight time budget.
  */
 export async function ingestOneAppleQuery(query: string, countries: string[]): Promise<AppleIngestResult> {
   try {
     const entity = await findEntity(query);
     if (!entity) {
-      return { query, entityFound: false, adsSeen: 0 };
+      return { query, entityFound: false, adsSeen: 0, adsClassified: 0 };
     }
     const ads = await fetchAdsForEntity(entity, countries);
+    const ingested: { id: string; headline: string | null; bodyCopy: string | null }[] = [];
     if (ads.length > 0) {
       const brandId = await upsertBrand(entity);
       for (const ad of ads) {
-        await upsertAd(brandId, ad);
+        ingested.push(await upsertAd(brandId, ad));
       }
     }
-    return { query, entityFound: true, adsSeen: ads.length };
+    const adsClassified = await classifyAndTagAds(ingested, 2);
+    return { query, entityFound: true, adsSeen: ads.length, adsClassified };
   } catch (err) {
-    return { query, entityFound: false, adsSeen: 0, error: err instanceof Error ? err.message : String(err) };
+    return { query, entityFound: false, adsSeen: 0, adsClassified: 0, error: err instanceof Error ? err.message : String(err) };
   }
 }

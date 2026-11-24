@@ -64,7 +64,11 @@ export function IngestForm() {
           ) : (
             <>
               Found {result.adsFound} ad{result.adsFound === 1 ? "" : "s"}, ingested{" "}
-              {result.adsIngested}.
+              {result.adsIngested}
+              {result.adsIngested > 0 && (
+                <> ({result.adsClassified} classified for messaging style)</>
+              )}
+              .
               {result.brands.length > 0 && (
                 <>
                   {" "}

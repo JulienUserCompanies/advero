@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestFacebookHtml } from "@/lib/facebook-ingest";
 
-export const maxDuration = 30;
+// See ingest-linkedin/route.ts — bumped from 30 for the same reason
+// (inline messaging-style classification on every new ad).
+export const maxDuration = 60;
 
 // POST a saved Facebook Ad Library page's HTML as the raw request body to
 // ingest it. Same manual, on-demand shape as ingest-linkedin (see

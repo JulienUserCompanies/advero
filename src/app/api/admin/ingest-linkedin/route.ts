@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestLinkedInHtml } from "@/lib/linkedin-ingest";
 
-export const maxDuration = 30;
+// 60 rather than 30: ingestion itself is fast, but messaging-style
+// classification (one Claude call per new ad, see messaging-classify.ts)
+// runs inline so the response's adsClassified count is accurate, and a
+// paste can contain dozens of new ads.
+export const maxDuration = 60;
 
 // POST a saved LinkedIn Ad Library page's HTML as the raw request body to
 // ingest it. There's no cron here (see linkedin-ingest.ts) — this is called

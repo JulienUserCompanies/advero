@@ -8,6 +8,7 @@ import { ingestFacebookHtml } from "@/lib/facebook-ingest";
 export interface AdsIngestResult {
   adsFound: number;
   adsIngested: number;
+  adsClassified: number;
   brands: string[];
   error?: string;
 }
@@ -32,18 +33,18 @@ export async function ingestAdsAction(
   const user = supabase ? (await supabase.auth.getUser()).data.user : null;
 
   if (!isAdminEmail(user?.email)) {
-    return { adsFound: 0, adsIngested: 0, brands: [], error: "Not authorized" };
+    return { adsFound: 0, adsIngested: 0, adsClassified: 0, brands: [], error: "Not authorized" };
   }
 
   const platform = String(formData.get("platform") ?? "");
   const ingest = INGESTERS[platform as IngestPlatform];
   if (!ingest) {
-    return { adsFound: 0, adsIngested: 0, brands: [], error: "Pick a platform" };
+    return { adsFound: 0, adsIngested: 0, adsClassified: 0, brands: [], error: "Pick a platform" };
   }
 
   const html = String(formData.get("html") ?? "");
   if (!html.trim()) {
-    return { adsFound: 0, adsIngested: 0, brands: [], error: "Paste the saved page's HTML first" };
+    return { adsFound: 0, adsIngested: 0, adsClassified: 0, brands: [], error: "Paste the saved page's HTML first" };
   }
 
   return ingest(html);

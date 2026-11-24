@@ -41,6 +41,16 @@ export interface Ad {
   format: AdFormat;
   cta: CtaType;
   emotionalAngle: EmotionalAngle;
+  /**
+   * Whether cta/emotionalAngle came from a real classification (a
+   * 'cta_type'/'emotional_angle' tag row) rather than the default fallback
+   * used when no tag exists yet (see get-ads.ts). Aggregations like
+   * brand-breakdown.ts's messaging-style section must check this — treating
+   * every untagged ad as "trust"/"learn_more" would misrepresent brands
+   * that simply haven't been classified yet (ANTHROPIC_API_KEY unset, or
+   * ingested before this feature existed) as uniformly trust-led.
+   */
+  messagingClassified: boolean;
   headline: string;
   bodyCopy: string;
   firstSeenAt: string;

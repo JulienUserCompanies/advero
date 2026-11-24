@@ -68,8 +68,9 @@ async function fetchAdsFromD1(): Promise<Ad[]> {
   return adRows.map((row) => {
     const tags = tagsByAd.get(row.id) ?? [];
     const format = (tags.find((t) => t.taxonomy === "format")?.value ?? "static") as AdFormat;
+    const angleTag = tags.find((t) => t.taxonomy === "emotional_angle");
     const cta = (tags.find((t) => t.taxonomy === "cta_type")?.value ?? "learn_more") as CtaType;
-    const emotionalAngle = (tags.find((t) => t.taxonomy === "emotional_angle")?.value ?? "trust") as EmotionalAngle;
+    const emotionalAngle = (angleTag?.value ?? "trust") as EmotionalAngle;
     const asset = assetByAd.get(row.id);
 
     const firstSeenMs = new Date(row.first_seen_at).getTime();
@@ -85,6 +86,7 @@ async function fetchAdsFromD1(): Promise<Ad[]> {
       format,
       cta,
       emotionalAngle,
+      messagingClassified: Boolean(angleTag),
       headline: row.headline ?? "",
       bodyCopy: row.body_copy ?? "",
       firstSeenAt: row.first_seen_at,

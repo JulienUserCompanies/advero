@@ -1,5 +1,6 @@
 import { d1Query } from "./d1";
 import { parseFacebookAdLibraryHtml, type ParsedFacebookAd } from "./facebook-parse";
+import { classifyAndTagAds } from "./messaging-classify";
 
 // Manual paste-in ingestion for Facebook, for the same reason LinkedIn has
 // one (see linkedin-ingest.ts): meta-ingest.ts's official Graph API route
@@ -32,7 +33,7 @@ async function upsertBrand(pageId: string, pageName: string): Promise<string> {
   return id;
 }
 
-async function upsertAd(brandId: string, ad: ParsedFacebookAd): Promise<void> {
+async function upsertAd(brandId: string, ad: ParsedFacebookAd): Promise<string> {
   const localId = `meta-${ad.externalAdId}`;
   const now = new Date().toISOString();
   const firstSeen = ad.startDateIso ?? now;
@@ -61,11 +62,14 @@ async function upsertAd(brandId: string, ad: ParsedFacebookAd): Promise<void> {
       [`ca-${localId}`, localId, ad.mediaKind ?? "image", ad.mediaUrl]
     );
   }
+
+  return localId;
 }
 
 export interface FacebookIngestResult {
   adsFound: number;
   adsIngested: number;
+  adsClassified: number;
   brands: string[];
   error?: string;
 }
@@ -78,12 +82,12 @@ export interface FacebookIngestResult {
 export async function ingestFacebookHtml(html: string): Promise<FacebookIngestResult> {
   const ads = parseFacebookAdLibraryHtml(html);
   if (ads.length === 0) {
-    return { adsFound: 0, adsIngested: 0, brands: [], error: "No ad data found in the pasted HTML" };
+    return { adsFound: 0, adsIngested: 0, adsClassified: 0, brands: [], error: "No ad data found in the pasted HTML" };
   }
 
   const brandIdByPageId = new Map<string, string>();
   const brandNames = new Set<string>();
-  let adsIngested = 0;
+  const ingested: { id: string; headline: string | null; bodyCopy: string | null }[] = [];
 
   for (const ad of ads) {
     try {
@@ -92,17 +96,21 @@ export async function ingestFacebookHtml(html: string): Promise<FacebookIngestRe
         brandId = await upsertBrand(ad.pageId, ad.advertiserName);
         brandIdByPageId.set(ad.pageId, brandId);
       }
-      await upsertAd(brandId, ad);
+      const localId = await upsertAd(brandId, ad);
+      ingested.push({ id: localId, headline: ad.headline, bodyCopy: ad.bodyCopy });
       brandNames.add(ad.advertiserName);
-      adsIngested += 1;
     } catch {
       // Keep going — one bad row shouldn't drop the rest of the paste.
     }
   }
 
+  // See linkedin-ingest.ts for why this is inline rather than fire-and-forget.
+  const adsClassified = await classifyAndTagAds(ingested);
+
   return {
     adsFound: ads.length,
-    adsIngested,
+    adsIngested: ingested.length,
+    adsClassified,
     brands: Array.from(brandNames),
   };
 }

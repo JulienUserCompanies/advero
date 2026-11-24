@@ -1,4 +1,5 @@
 import { d1Query } from "./d1";
+import { classifyAndTagAds } from "./messaging-classify";
 
 // Meta Ad Library API ingestion — see build-plan doc "Meta (Facebook/Instagram)
 // Ingestion": official, free, Graph API-based, no special partnership needed
@@ -57,7 +58,7 @@ async function upsertBrand(pageId: string, pageName: string): Promise<string> {
   return id;
 }
 
-async function upsertAd(brandId: string, ad: AdLibraryAd): Promise<void> {
+async function upsertAd(brandId: string, ad: AdLibraryAd): Promise<{ id: string; headline: string | null; bodyCopy: string | null }> {
   const localId = `meta-${ad.id}`;
   const headline = ad.ad_creative_link_captions?.[0] ?? null;
   const bodyCopy = ad.ad_creative_bodies?.[0] ?? null;
@@ -84,34 +85,40 @@ async function upsertAd(brandId: string, ad: AdLibraryAd): Promise<void> {
       [`ca-${localId}`, localId, ad.ad_snapshot_url]
     );
   }
+
+  return { id: localId, headline, bodyCopy };
 }
 
 export interface IngestResult {
   pageId: string;
   adsSeen: number;
+  adsClassified: number;
   error?: string;
 }
 
 /**
  * Pulls ads for each tracked Meta Page ID and upserts brand/ad/creative_asset
- * rows into D1. No tags are written here — tagging is a separate pipeline
- * (build-plan "Tagging & Enrichment"); untagged ads fall back to default
- * facet values in getArchiveData().
+ * rows into D1, then runs messaging-style classification (see
+ * messaging-classify.ts) over whatever came back — best-effort and skipped
+ * entirely if ANTHROPIC_API_KEY isn't set, so ingestion itself never
+ * depends on it.
  */
 export async function ingestMetaAds(pageIds: string[], accessToken: string, countries: string[]): Promise<IngestResult[]> {
   const results: IngestResult[] = [];
   for (const pageId of pageIds) {
     try {
       const ads = await fetchAdsForPage(pageId, accessToken, countries);
+      const ingested: { id: string; headline: string | null; bodyCopy: string | null }[] = [];
       if (ads.length > 0) {
         const brandId = await upsertBrand(pageId, ads[0].page_name);
         for (const ad of ads) {
-          await upsertAd(brandId, ad);
+          ingested.push(await upsertAd(brandId, ad));
         }
       }
-      results.push({ pageId, adsSeen: ads.length });
+      const adsClassified = await classifyAndTagAds(ingested);
+      results.push({ pageId, adsSeen: ads.length, adsClassified });
     } catch (err) {
-      results.push({ pageId, adsSeen: 0, error: err instanceof Error ? err.message : String(err) });
+      results.push({ pageId, adsSeen: 0, adsClassified: 0, error: err instanceof Error ? err.message : String(err) });
     }
   }
   return results;
