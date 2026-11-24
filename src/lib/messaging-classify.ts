@@ -88,14 +88,26 @@ export async function classifyAdMessaging(
       },
       body: JSON.stringify({
         model: "openrouter/free",
-        max_tokens: 100,
+        // The free router can land on a reasoning model (seen: a 100-token
+        // budget got entirely consumed by chain-of-thought, with the
+        // actual answer cut off before it was written — finish_reason
+        // "length", content: null). reasoning.enabled:false asks any
+        // reasoning-capable model behind the router to skip that step;
+        // max_tokens is raised well past what the JSON answer alone needs
+        // as a safety net for models that ignore the flag.
+        max_tokens: 500,
+        reasoning: { enabled: false },
         messages: [{ role: "user", content: buildPrompt(text) }],
       }),
     });
     if (!res.ok) return null;
 
     const json = await res.json();
-    const raw: string = json?.choices?.[0]?.message?.content ?? "";
+    const message = json?.choices?.[0]?.message;
+    // Fall back to the reasoning text if content came back empty — some
+    // models write the JSON inside their chain-of-thought even when asked
+    // not to reason, rather than not answering at all.
+    const raw: string = message?.content || message?.reasoning || "";
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return null;
 
@@ -148,7 +160,8 @@ export async function classifyAdMessagingDebug(
       },
       body: JSON.stringify({
         model: "openrouter/free",
-        max_tokens: 100,
+        max_tokens: 500,
+        reasoning: { enabled: false },
         messages: [{ role: "user", content: buildPrompt(text) }],
       }),
     });
@@ -156,7 +169,7 @@ export async function classifyAdMessagingDebug(
     let parsedText: string | undefined;
     try {
       const json = JSON.parse(rawBody);
-      parsedText = json?.choices?.[0]?.message?.content;
+      parsedText = json?.choices?.[0]?.message?.content || json?.choices?.[0]?.message?.reasoning;
     } catch {
       // rawBody wasn't JSON — leave parsedText undefined, rawBody shows why.
     }
