@@ -47,7 +47,7 @@ export interface Ad {
    * used when no tag exists yet (see get-ads.ts). Aggregations like
    * brand-breakdown.ts's messaging-style section must check this — treating
    * every untagged ad as "trust"/"learn_more" would misrepresent brands
-   * that simply haven't been classified yet (ANTHROPIC_API_KEY unset, or
+   * that simply haven't been classified yet (OPENROUTER_API_KEY unset, or
    * ingested before this feature existed) as uniformly trust-led.
    */
   messagingClassified: boolean;

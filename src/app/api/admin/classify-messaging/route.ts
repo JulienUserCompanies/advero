@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   if (!CLASSIFIER_CONFIGURED) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not set — nothing to backfill" },
+      { error: "OPENROUTER_API_KEY is not set — nothing to backfill" },
       { status: 400 }
     );
   }

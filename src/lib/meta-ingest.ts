@@ -100,7 +100,7 @@ export interface IngestResult {
  * Pulls ads for each tracked Meta Page ID and upserts brand/ad/creative_asset
  * rows into D1, then runs messaging-style classification (see
  * messaging-classify.ts) over whatever came back — best-effort and skipped
- * entirely if ANTHROPIC_API_KEY isn't set, so ingestion itself never
+ * entirely if OPENROUTER_API_KEY isn't set, so ingestion itself never
  * depends on it.
  */
 export async function ingestMetaAds(pageIds: string[], accessToken: string, countries: string[]): Promise<IngestResult[]> {

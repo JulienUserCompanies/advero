@@ -99,7 +99,7 @@ export async function ingestLinkedInHtml(html: string): Promise<LinkedInIngestRe
   }
 
   // Messaging-style classification (see messaging-classify.ts): best-effort,
-  // skipped entirely if ANTHROPIC_API_KEY isn't set. Kept inline rather than
+  // skipped entirely if OPENROUTER_API_KEY isn't set. Kept inline rather than
   // fire-and-forget so the response's adsClassified count is accurate — the
   // route's maxDuration is sized to cover this.
   const adsClassified = await classifyAndTagAds(ingested);

@@ -7,12 +7,17 @@ import type { CtaType, EmotionalAngle } from "./types";
 // or video: that's a separate, much more expensive thing (downloading and
 // running every ad's media through a vision model) that isn't built here.
 //
-// Requires ANTHROPIC_API_KEY. Without it, classification is skipped
-// entirely — ingestion still works, ads just carry no messaging tags, same
-// as before this feature existed. A missing key degrades gracefully rather
-// than blocking a paste or a cron run.
+// Uses OpenRouter's free model router (openrouter/free) — $0 per token,
+// OpenAI-compatible chat/completions API, rate-limited rather than billed.
+// Still requires OPENROUTER_API_KEY (free to create at openrouter.ai/keys,
+// but it's a real key, not "no key needed"). Without it, classification is
+// skipped entirely — ingestion still works, ads just carry no messaging
+// tags, same as before this feature existed. A missing key, or the free
+// router being rate-limited on a given call, degrades gracefully rather
+// than blocking a paste or a cron run — the ad just stays unclassified
+// until the next backfill run picks it up.
 
-const API_KEY = process.env.ANTHROPIC_API_KEY;
+const API_KEY = process.env.OPENROUTER_API_KEY;
 export const CLASSIFIER_CONFIGURED = Boolean(API_KEY);
 
 const EMOTIONAL_ANGLES: EmotionalAngle[] = [
@@ -56,8 +61,9 @@ Respond with ONLY this JSON object, no other text:
 }
 
 /**
- * Classifies one ad's headline + body copy via Claude. Returns null if the
- * classifier isn't configured, there's no text to classify, or the
+ * Classifies one ad's headline + body copy via OpenRouter's free model
+ * router. Returns null if the classifier isn't configured, there's no text
+ * to classify, the free router is rate-limited for this call, or the
  * response doesn't parse cleanly — callers treat null as "skip, don't tag"
  * rather than retry.
  */
@@ -70,15 +76,18 @@ export async function classifyAdMessaging(
   if (!text) return null;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
+        authorization: `Bearer ${API_KEY}`,
         "content-type": "application/json",
+        // Required by some free-tier providers behind the router, optional
+        // otherwise — identifies the app for OpenRouter's own rankings.
+        "http-referer": "https://advero-sage.vercel.app",
+        "x-title": "Advero",
       },
       body: JSON.stringify({
-        model: "claude-haiku-5-5",
+        model: "openrouter/free",
         max_tokens: 100,
         messages: [{ role: "user", content: buildPrompt(text) }],
       }),
@@ -86,7 +95,7 @@ export async function classifyAdMessaging(
     if (!res.ok) return null;
 
     const json = await res.json();
-    const raw: string = json?.content?.[0]?.text ?? "";
+    const raw: string = json?.choices?.[0]?.message?.content ?? "";
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return null;
 
@@ -129,14 +138,17 @@ export interface ClassifiableAd {
 /**
  * Classifies and tags a batch of ads that don't have a messaging tag yet,
  * with limited concurrency so one ingestion run can't fan out into dozens
- * of simultaneous API calls. Best-effort throughout: a classification
- * failure for one ad is swallowed so it never breaks ingestion itself —
- * worst case that ad just stays untagged until the next backfill run.
+ * of simultaneous API calls — kept modest since the free router is
+ * rate-limited, not billed, so hammering it just produces more skipped
+ * (null) classifications rather than a bigger bill. Best-effort throughout:
+ * a classification failure for one ad is swallowed so it never breaks
+ * ingestion itself — worst case that ad just stays untagged until the next
+ * backfill run.
  *
  * Returns how many ads were actually tagged, so callers (ingestion
  * responses, the backfill route) can report it.
  */
-export async function classifyAndTagAds(ads: ClassifiableAd[], concurrency = 4): Promise<number> {
+export async function classifyAndTagAds(ads: ClassifiableAd[], concurrency = 2): Promise<number> {
   if (!CLASSIFIER_CONFIGURED || ads.length === 0) return 0;
 
   let tagged = 0;

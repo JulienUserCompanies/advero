@@ -147,7 +147,7 @@ export interface AppleIngestResult {
  * Resolves ONE seed app/developer name to an Apple entity id, pulls its
  * recent EU App Store ads, and upserts brand/ad/creative_asset rows into D1,
  * then runs messaging-style classification (see messaging-classify.ts) over
- * them — best-effort and skipped entirely without ANTHROPIC_API_KEY.
+ * them — best-effort and skipped entirely without OPENROUTER_API_KEY.
  *
  * Deliberately processes a single query per call: Apple's repository needs
  * ~5s between requests to avoid 429s, and a serverless function's own time
@@ -156,7 +156,7 @@ export interface AppleIngestResult {
  * that want to cover a whole seed list should call this once per name —
  * see the cron route's day-rotation for how the daily job covers a list
  * over time without needing a long-running batch. Classification runs with
- * lower concurrency (2) here than the other ingestion paths, to leave
+ * lower concurrency (1) here than the other ingestion paths (default 2), to leave
  * headroom in that same tight time budget.
  */
 export async function ingestOneAppleQuery(query: string, countries: string[]): Promise<AppleIngestResult> {
@@ -173,7 +173,7 @@ export async function ingestOneAppleQuery(query: string, countries: string[]): P
         ingested.push(await upsertAd(brandId, ad));
       }
     }
-    const adsClassified = await classifyAndTagAds(ingested, 2);
+    const adsClassified = await classifyAndTagAds(ingested, 1);
     return { query, entityFound: true, adsSeen: ads.length, adsClassified };
   } catch (err) {
     return { query, entityFound: false, adsSeen: 0, adsClassified: 0, error: err instanceof Error ? err.message : String(err) };
